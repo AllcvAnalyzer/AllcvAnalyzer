@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Allcv Analyzer</title>
+<link rel="shortcut icon" type="image/png" href="zebralogo.png">
+<style>
+    h1 {
+        color: black;
+        font-family: sans-serif;
+        font-size: 30px;
+        display: inline-block;
+        margin-top:34px;
+        float:center;
+    }
+
+    .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .button-container {
+        display: flex;
+        justify-content: space-between;
+        width: 80%;
+        margin-bottom: 10px;
+        align-items: center;
+    }
+
+    textarea {
+        width: 80%;
+        margin-bottom: 10px;
+        background-color: #E9ECFF;
+        font-family:sans-serif;
+        font-size: 15px;
+    }
+    button {
+        display:flex;
+        padding: 10px 20px;
+        background-color: #78D64B;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: box-shadow 0.3s;
+    }
+
+    button2 {
+        display:flex;
+        padding: 10px 20px;
+        background-color: #F6BE00;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: box-shadow 0.3s;
+    }
+
+    button:hover,
+    button2:hover {
+        box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    .suggestion {
+        width: 80%;
+        margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        display: none;
+        background-color:#E9ECFF;
+        font-family:sans-serif;
+        font-size: 15px;
+    }
+
+    .notification {
+        width: 80%;
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #e0e0e0;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        display: none;
+    }
+
+    .wrong {
+        color: red;
+    }
+
+    .recommended {
+        color: green;
+    }
+
+    .buttonAnalyze{
+        margin-left:20px;
+
+    }
+
+    option{
+        padding: 10px 20px;
+        background-color: #1E22AA;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        color: white;
+    }
+
+    select{
+        padding: 10px 20px;
+        background-color: #1E22AA;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        color: white;
+    }
+
+    .buttonAnalyze{
+        display:flex;
+    }
+
+    img{
+        padding:10px;
+        width:170px;
+        display: inline-block;
+        align-items: left;
+        float:left;
+    }
+
+    /* Solid border */
+     hr.solid {
+       border-top: 2px solid #bbb;
+       margin-top: 10px;
+    }
+
+    label{
+        font-family: san-serif;
+        font-size:18px;
+    }
+
+.contact-support {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background-color: #007BFF;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-family: sans-serif;
+    font-size: 10px;
+    transition: background-color 0.3s;
+}
+
+.contact-support:hover {
+    background-color: #58595c;
+}
+    }
+<style>
+</style>
+</head>
+<body>
+<a href="https://www.zebra.com" target="_blank">
+    <img style='vertical-align:middle;' src='https://cdn.worldvectorlogo.com/logos/zebra-technologies-logo.svg'>
+</a>
+<center><div>
+<a href="mailto:AllcvAnalyzerTeam@zebra.com" class="contact-support">Need Help?</a>
+<h1>Allcv Analyzer</h1></center>
+</div>
+<hr class="solid">
+<br><br>
+<br><br>
+<div class="container">
+    <div class="button-container">
+        <form action="#">
+        <label for="settings">Choose a Parameter:</label>
+        <select name="settings" id="settings" onchange="analyzeParams()">
+            <option value="All">All</option>
+            <option value="Bluetooth">Bluetooth</option>
+            <option value="WLAN">WLAN</option>
+            <option value="Internal">Internal Wired</option>
+            <option value="Firmware">Firmware</option>
+        </select>
+        </form>
+        <button class= "buttonAnalyze" onclick="analyzeParams()">Analyze Parameters</button>
+        <button2 onclick="wipe()">Wipe</button2>
+    </div>
+    <textarea id="userParams" rows="15" placeholder="Paste your parameters and settings here..."></textarea>
+    <div id="suggestionOutput" class="suggestion"></div>
+    <div id="notification" class="notification">There is nothing wrong with the allcv</div>
+</div>
+
+<script>
+    function analyzeParams() {
+        var userParams = document.getElementById("userParams").value;
+        var selectedParam = document.getElementById("settings").value;
+        var suggestionOutput = document.getElementById("suggestionOutput");
+        var notification = document.getElementById("notification");
+
+        // Check if the textarea is empty
+        if (userParams.trim() === '') {
+            suggestionOutput.innerHTML = "<p>No suggestions available for the selected parameter.</p>";
+            suggestionOutput.style.display = "block"; 
+            notification.style.display = "none"; 
+            return;
+        }
+
+        var suggestions = getBestPractices(userParams, selectedParam);
+        suggestionOutput.innerHTML = suggestions;
+
+        if (suggestions.trim() !== '') {
+            suggestionOutput.style.display = "block"; 
+            notification.style.display = "none"; 
+        } else {
+            suggestionOutput.innerHTML = "<p>No suggestions available for the selected parameter.</p>";
+            suggestionOutput.style.display = "block"; 
+            notification.style.display = "none"; 
+        }
+    }
+
+    function getBestPractices(userParams, selectedParam) {
+        var suggestions = '';
+        var bluetoothSuggestions = '';
+        var wlanSuggestions = '';
+        var internalSuggestions = '';
+        var applSuggestions = '';
+
+        // Define the predefined parameters and their best practices for Bluetooth
+        var predefinedBluetoothParams = {
+            "bluetooth.discoverable": { valid: "on", invalid: "off", display: "Recommended settings: on"},
+            "bluetooth.short_address": { valid: "Any value", invalid: "000000000000", display: "Not Present" },
+            "bluetooth.enable": { valid: "on", invalid: "off", display: "Recommended settings: on" },
+            "bluetooth.bonding": { valid: "on", invalid: "off", display: "Recommended settings: on" },
+            "bluetooth.enable_reconnect": { valid: "iOS_only", invalid: "off", display: "Recommended settings: iOS only" },
+            "bluetooth.sniff_mode_enable": { valid: "disabled", invalid: "enabled", display: "Recommended settings: disabled" }
+        };
+
+        // Define the predefined parameters and their best practices for WLAN
+        var predefinedWlanParams = {
+            "wlan.essid": { valid: "Any value", invalid: "", display: "ESSID Not Set" },
+            "wlan.wpa.enable": { valid: "on", invalid: "off", display: "Recommended settings: on" },
+            "wlan.security": { valid: ["none", "eap-tls", "eap-ttls", "eap-fast", "peap", "leap", "wpa psk", "wpa eap-tls", "wpa eap-ttls", "wpa eap-fast", "wpa peap", "wpa leap"], invalid: "", display: "Current value" },
+            "wlan.ip.addr": { valid: "Any value", invalid: "0.0.0.0", display: "No IP address" },
+            "wlan.ip.netmask": { valid: "Any value", invalid: "0.0.0.0", display: "No Subnet Mask" },
+            "wlan.ip.gateway": { valid: "Any value", invalid: "0.0.0.0", display: "No Gateway" },
+            "wlan.mac_raw": { valid: "Any value", invalid: "000000000000", display: "Not Present" },
+            "wlan.user_channel_list": { valid: ["1","2","3","4","5","6","7","8","9","10","11","all"], invalid: "Any other than “all”", display: "Recommended Settings: all" },
+            "wlan.ip.port": { valid: ["6101" ,"9100"], invalid: "Other than VV", display: "Recommended Port: 9100" },
+            "wlan.pmf": { valid: "disabled", invalid: "enabled", display: "Recommended Settings: disabled" }
+        };
+
+        // Define the predefined parameters and their best practices for Internal Wired
+        var predefinedInternalParams = {
+            "internal_wired.ip.addr": { valid: "Any value", invalid: "0.0.0.0", display: "No IP address" },
+            "internal_wired.ip.netmask": { valid: "Any value", invalid: "0.0.0.0", display: "No Subnet Mask" },
+            "internal_wired.ip.gateway": { valid: "Any value", invalid: "0.0.0.0", display: "No Gateway" },
+            "internal_wired.ip.port": { valid: ["6101","9101"], invalid: "0", display: "No Port Set" },
+            "internal_wired.ip.arp_interval": { valid: "1", invalid: "0", display: "Recommended Settings: 1" },
+            "internal_wired.ip.timeout.enable": { valid: "on", invalid: "off", display: "Recommended Settings: on" },
+            "internal_wired.ip.timeout.value": { valid: "5", invalid: "Other than 5", display: "Recommended Settings: 5" },
+            "internal_wired.mac_raw": { valid: "Any Value", invalid: "000000000000", display: "No mac address" }
+        };
+
+            // Define the predefined parameters and their best practices for Appl
+        var predefinedapplParams = {
+            "appl.name": { valid: ["V89.21.30Z", "V93.21.30Z", "V84.20.23Z", "V83.20.25Z", "V88.01.06Z", "V101.21.30Z", "V91.21.30Z", "V85.20.25Z", "V100.21.30Z", "V53.17.24Z", "V97.21.30Z", "V72.20.25Z", "V75.20.21Z", "V92.21.30Z", "V96.21.30Z", "V94.21.30Z"], invalid: "", display: "Not Updated" },
+            "appl.link_os_version": { valid: ["6.9", "6.4", "6.7", "6.2"], invalid: ""}
+        };
+
+// Function to generate suggestions based on user parameters and predefined parameters
+// Function to generate suggestions based on user parameters and predefined parameters
+function generateSuggestions(userParams, predefinedParams, header) {
+    var suggestions = '';
+    var userParamsArray = userParams.split('\n');
+    for (var i = 0; i < userParamsArray.length; i++) {
+        var param = userParamsArray[i].split(':');
+        if (param.length >= 2) {
+            var paramName = param[0].trim();
+            var paramValue = param[1].split(',')[0].trim(); // Remove additional information after the comma
+            if (predefinedParams[paramName]) {
+                if (paramName === 'internal_wired.ip.timeout.value') {
+                    if (paramValue !== '5') {
+                        suggestions += '<p>' + '<b>' + paramName + '</b>' + ': ' + '</b>: <span style="color: red;">' + paramValue + ' (Invalid) - ' + '<span class="recommended">'+ '</b>: <span style="color: red;">' + predefinedParams[paramName].display + '</p>';
+                    }
+                } else if (Array.isArray(predefinedParams[paramName].valid)) {
+                    if (paramName === 'appl.name') {
+                        if (predefinedParams[paramName].valid.includes(paramValue)) {
+                            suggestions += '<p><b>' + paramName + '</b>: <span style="color: green;">' + paramValue + ' (Updated)</span></p>';
+                        } else {
+                            suggestions += '<p><b>' + paramName + '</b>: <span style="color: red;">' + paramValue + ' (Not Updated)</span> <span class="recommended">';
+                        }
+                    } else if (paramName === 'appl.link_os_version') {
+                        if (predefinedParams[paramName].valid.includes(paramValue)) {
+                            suggestions += '<p><b>' + paramName + '</b>: <span style="color: black;">' + paramValue + '</span></p>';
+                        } else {
+                            suggestions += '<p><b>' + paramName + '</b>: <span style="color: black;">' + paramValue + '</span></p>';
+                        }
+                    } else {
+                        if (!predefinedParams[paramName].valid.includes(paramValue)) {
+                            suggestions += '<p>' + '<b>' + paramName + '</b>' + ': ' + '</b>: <span style="color: red;">' + paramValue + ' (Invalid) - ' + '<span class="recommended">'+ '</b>: <span style="color: red;">' + predefinedParams[paramName].display + '</span></p>';
+                        }
+                    }
+                } else if (paramName === 'bluetooth.short_address' || paramName === 'wlan.mac_raw' || paramName === 'internal_wired.mac_raw') {
+                    // Special case for MAC addresses
+                    if (paramValue === predefinedParams[paramName].invalid) {
+                        suggestions += '<p><b>' + paramName + '</b>: <span style="color: red;">' + paramValue + ' </span> - <span class="recommended">' + '</b>: <span style="color: red;">' + predefinedParams[paramName].display + '</span></p>';
+                    } else {
+                        suggestions += '<p><b>' + paramName + '</b>: <span style="color: green;">' + paramValue + ' </span></p>';
+                    }
+                } else {
+                    if (paramValue !== predefinedParams[paramName].valid && paramValue === predefinedParams[paramName].invalid) {
+                        suggestions += '<p>' + '<b>' + paramName + '</b>' + ': '+ '</b>: <span style="color: red;">' + paramValue + ' (Invalid) - ' + '<span class="recommended">'+ '</b>: <span style="color: red;">' + predefinedParams[paramName].display +  '</span></p>';
+                    }
+                }
+            }
+        }
+    }
+    return suggestions ? '<h2><u>' + header + '</u></h2>' + suggestions : '' + '</br>';
+}
+
+
+
+        // Generate suggestions based on the selected parameter category
+        if (selectedParam === 'All' || selectedParam === 'Bluetooth') {
+            bluetoothSuggestions = generateSuggestions(userParams, predefinedBluetoothParams, 'Bluetooth');
+        }
+        if (selectedParam === 'All' || selectedParam === 'WLAN') {
+            wlanSuggestions = generateSuggestions(userParams, predefinedWlanParams, 'WLAN');
+        }
+        if (selectedParam === 'All' || selectedParam === 'Internal') {
+            internalSuggestions = generateSuggestions(userParams, predefinedInternalParams, 'Internal Wired');
+        }
+         if (selectedParam === 'All' || selectedParam === 'Firmware') {
+            applSuggestions = generateSuggestions(userParams, predefinedapplParams, 'Firmware');
+        }
+
+
+        suggestions = bluetoothSuggestions + wlanSuggestions + internalSuggestions + applSuggestions;
+        return suggestions;
+    }
+
+    function wipe() {
+        document.getElementById("userParams").value = "";
+        document.getElementById("suggestionOutput").style.display = "none";
+        document.getElementById("notification").style.display = "none";
+    }
+</script>
+
+
+</body>
+</html>
