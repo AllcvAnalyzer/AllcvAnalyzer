@@ -90,28 +90,62 @@ textarea::placeholder {
         width: 80%;
         margin-top: 20px;
         padding: 15px;
-        border: 1px solid #8E9299; /* Darker border */
+        border: 1px solid #8E9299;
         border-radius: 5px;
         display: none;
-        background-color: #000000; /* Matching dark grey */
+        background-color: #000000;
         font-family: sans-serif;
         font-size: 15px;
         position: relative;
         color: #ffffff; /* White text */
     }
-
-    .notification {
-        width: 80%;
-        margin-top: 20px;
-        padding: 15px;
-        background-color: #8E9299; /* Slightly lighter grey */
-        border: 1px solid #2D2F33;
+    #notification {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background-color: #78D64B;
+        color: black;
+        padding: 10px 20px;
         border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
         display: none;
-        font-family: sans-serif;
-        font-size: 15px;
-        text-align: center;
-        color: #ffffff; /* White text */
+        opacity: 0;
+    }
+	
+	/* Optional: For stacking multiple notifications */
+.special-notification {
+    /* top: 60px; */ /* Uncomment and adjust if stacking is preferred */
+}
+
+    @keyframes slideIn {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOut {
+        from {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+    }
+
+    .notification-slide-in {
+        animation: slideIn 0.5s ease-out forwards;
+    }
+
+    .notification-slide-out {
+        animation: slideOut 0.8s ease-in forwards;
     }
 
     .wrong { color: #ff5555; } /* Lighter red for visibility */
@@ -205,6 +239,25 @@ textarea::placeholder {
         background-color: #2D2F33;
         border-color: #2C8CEB;
     }
+	
+	#suggestionOutput {
+    position: relative; /* Allows absolute positioning of child elements */
+    padding: 20px; /* Ensure space for the message */
+}
+
+/* Style for the hover instruction message */
+.hover-instruction {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #2D2F33;
+    border: 1px solid #5C5F66;
+    border-radius: 3px;
+    padding: 5px 10px;
+    font-size: 12px;
+    color: #FFFFFF;
+    font-style: italic;
+}
 </style>
 </head>
 <body>
@@ -252,6 +305,7 @@ textarea::placeholder {
     const suggestionOutput = document.getElementById('suggestionOutput');
     const notification = document.getElementById('notification');
 
+    // Interactive Inputs: Drag-and-Drop and File Upload
     dragArea.addEventListener('dragover', (e) => {
         e.preventDefault();
         dragArea.classList.add('dragover');
@@ -284,19 +338,17 @@ textarea::placeholder {
     });
 
     function handleFile(file) {
-        if (file && (file.type === 'text/plain' || file.name.endsWith('.log'))) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                userParams.value = e.target.result;
-                analyzeParams();
-            };
-            reader.readAsText(file);
-        } else {
-            notification.textContent = 'Please upload a valid .txt or .log file.';
-            notification.style.display = 'block';
-            setTimeout(() => notification.style.display = 'none', 3000);
-        }
+    if (file && (file.type === 'text/plain' || file.name.endsWith('.log'))) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            userParams.value = e.target.result;
+            analyzeParams();
+        };
+        reader.readAsText(file);
+    } else {
+        showNotification('Please upload a valid .txt or .log file.', '#F44336'); // Red for error
     }
+}
 
     function analyzeParams() {
     const params = userParams.value;
@@ -304,10 +356,10 @@ textarea::placeholder {
 
     suggestionOutput.style.display = 'none';
     notification.style.display = 'none';
+    notification.classList.remove('notification-slide-in', 'notification-slide-out');
 
     if (params.trim() === '') {
-        notification.textContent = 'Please paste parameters or upload a log file to analyze.';
-        notification.style.display = 'block';
+        showNotification('Please paste parameters or upload a log file to analyze.', '#F44336'); // Red for error
         return;
     }
 
@@ -318,152 +370,165 @@ textarea::placeholder {
     }
 
     const suggestions = getBestPractices(params, selectedParam);
+    let outputHTML = completenessWarning + suggestions;
+
+    // Check if suggestions contain [?] and add hover instruction if so
+    if (suggestions.includes('[?]')) {
+        outputHTML = completenessWarning + '<div class="hover-instruction">Hover to [?] for more details</div>' + suggestions;
+    }
+
     if (suggestions.trim() !== '') {
-        suggestionOutput.innerHTML = completenessWarning + suggestions; // Prepend warning if incomplete
+        suggestionOutput.innerHTML = outputHTML;
         suggestionOutput.style.display = 'block';
-        notification.textContent = 'Analysis complete! See recommendations above.';
-        notification.style.display = 'block';
-        setTimeout(() => notification.style.display = 'none', 3000);
+        showNotification('Analysis complete!', '#78D64B'); // Green for success
     } else {
-        suggestionOutput.innerHTML = completenessWarning + '<p>No issues detected for the selected parameter category.</p>';
+        suggestionOutput.innerHTML = outputHTML || completenessWarning + '<p>No issues detected.</p>';
         suggestionOutput.style.display = 'block';
-        notification.textContent = 'No suggestions needed—everything looks good!';
-        notification.style.display = 'block';
-        setTimeout(() => notification.style.display = 'none', 3000);
+        showNotification('No suggestions needed—everything looks good!', '#78D64B'); // Green for success
     }
 }
 
+    function showNotification(message, bgColor) {
+    notification.textContent = message;
+    notification.style.backgroundColor = bgColor;
+    notification.style.display = 'block';
+    notification.classList.add('notification-slide-in');
+
+    setTimeout(() => {
+        notification.classList.remove('notification-slide-in');
+        notification.classList.add('notification-slide-out');
+        setTimeout(() => {
+            notification.style.display = 'none';
+            notification.classList.remove('notification-slide-out');
+        }, 500); // Matches slideOut animation duration
+    }, 4000); // Display duration before sliding out
+}
+
         function getBestPractices(userParams, selectedParam) {
-            let suggestions = '';
-            const bluetoothSuggestions = '';
-            const wlanSuggestions = '';
-            const internalSuggestions = '';
-            const applSuggestions = '';
-
-            const predefinedBluetoothParams = {
-                "bluetooth.discoverable": { valid: "on", invalid: "off", display: "Recommended: on", tooltip: "Enables device visibility for pairing." },
-                "bluetooth.short_address": { valid: "Any value", invalid: "000000000000", display: "Not Present", tooltip: "Unique Bluetooth address; should not be all zeros." },
-                "bluetooth.enable": { valid: "on", invalid: "off", display: "Recommended: on", tooltip: "Turns on Bluetooth functionality." },
-                "bluetooth.bonding": { valid: "on", invalid: "off", display: "Recommended: on", tooltip: "Enables secure device pairing." },
-                "bluetooth.enable_reconnect": { valid: "iOS_only", invalid: "off", display: "Recommended: iOS only", tooltip: "Improves reconnection reliability on iOS devices." },
-                "bluetooth.sniff_mode_enable": { valid: "disabled", invalid: "enabled", display: "Recommended: disabled", tooltip: "Disabling reduces power consumption." }
-            };
-
-            const predefinedWlanParams = {
-                "wlan.essid": { valid: "Any value", invalid: "", display: "ESSID Not Set", tooltip: "Network name must be specified." },
-                "wlan.wpa.enable": { valid: "on", invalid: "off", display: "Recommended: on", tooltip: "Enables WPA security for WLAN." },
-                "wlan.security": { valid: ["none", "eap-tls", "eap-ttls", "eap-fast", "peap", "leap", "wpa psk", "wpa eap-tls", "wpa eap-ttls", "wpa eap-fast", "wpa peap", "wpa leap"], invalid: "", display: "Current value", tooltip: "Supported security protocols." },
-                "wlan.ip.addr": { valid: "Any value", invalid: "0.0.0.0", display: "No IP address", tooltip: "Valid IP required for network connectivity." },
-                "wlan.ip.netmask": { valid: "Any value", invalid: "0.0.0.0", display: "No Subnet Mask", tooltip: "Defines network segment." },
-                "wlan.ip.gateway": { valid: "Any value", invalid: "0.0.0.0", display: "No Gateway", tooltip: "Gateway IP for routing traffic." },
-                "wlan.mac_raw": { valid: "Any value", invalid: "000000000000", display: "Not Present", tooltip: "Unique MAC address; should not be all zeros." },
-                "wlan.user_channel_list": { valid: ["1","2","3","4","5","6","7","8","9","10","11","all"], invalid: "Any other than 'all'", display: "Recommended: all", tooltip: "Set to 'all' for maximum channel flexibility." },
-                "wlan.ip.port": { valid: ["6101", "9100"], invalid: "Other than VV", display: "Recommended: 9100", tooltip: "Port 9100 is standard for printing." },
-                "wlan.pmf": { valid: "disabled", invalid: "enabled", display: "Recommended: disabled", tooltip: "Disable PMF unless required by network." }
-            };
-
-            const predefinedInternalParams = {
-                "internal_wired.ip.addr": { valid: "Any value", invalid: "0.0.0.0", display: "No IP address", tooltip: "Valid IP required for wired connection." },
-                "internal_wired.ip.netmask": { valid: "Any value", invalid: "0.0.0.0", display: "No Subnet Mask", tooltip: "Defines wired network segment." },
-                "internal_wired.ip.gateway": { valid: "Any value", invalid: "0.0.0.0", display: "No Gateway", tooltip: "Gateway IP for wired routing." },
-                "internal_wired.ip.port": { valid: ["6101","9101"], invalid: "0", display: "No Port Set", tooltip: "Set a valid port for communication." },
-                "internal_wired.ip.arp_interval": { valid: "1", invalid: "0", display: "Recommended: 1", tooltip: "ARP interval of 1 ensures network updates." },
-                "internal_wired.ip.timeout.enable": { valid: "on", invalid: "off", display: "Recommended: on", tooltip: "Enables timeout for connection stability." },
-                "internal_wired.ip.timeout.value": { valid: "5", invalid: "Other than 5", display: "Recommended: 5", tooltip: "5 seconds is optimal for timeout." },
-                "internal_wired.mac_raw": { valid: "Any Value", invalid: "000000000000", display: "No MAC address", tooltip: "Unique MAC address required." }
-            };
-
-            // Define the predefined parameters and their best practices for Firmware
-const predefinedapplParams = {
-    "appl.name": {
-        valid: ["V89.21.30Z", "V93.21.30Z", "V84.20.23Z", "V83.20.25Z", "V88.01.06Z", "V101.21.30Z", "V91.21.30Z", "V85.20.25Z", "V100.21.30Z", "V53.17.24Z", "V97.21.30Z", "V72.20.25Z", "V75.20.21Z", "V92.21.30Z", "V96.21.30Z", "V94.21.30Z"],
-        invalid: "",
-        display: "Not Updated",
-        tooltip: "Firmware version must be up-to-date. Check the latest versions on Zebra's website."
-    },
-    "appl.link_os_version": {
-        valid: ["7.2", "7.1", "7.0", "6.9", "6.8", "6.7", "6.6", "6.5", "6.4", "6.3", "6.2", "6.1", "6.0"], 
-        olderValid: ["5.1", "5.2", "5.3", "4.0", "2.5"],
-        tooltip: "Link-OS version. Older versions may still be valid for some printers. Verify compatibility at zebra.com/support."
-    }
-};
-
-// Last updated date for generic firmware list
-const firmwareLastUpdated = "March 12, 2025";
-
-function generateSuggestions(userParams, predefinedParams, header) {
     let suggestions = '';
-    const userParamsArray = userParams.split('\n');
-    for (let i = 0; i < userParamsArray.length; i++) {
-        const param = userParamsArray[i].split(':');
-        if (param.length >= 2) {
-            const paramName = param[0].trim();
-            const paramValue = param[1].split(',')[0].trim();
-            if (predefinedParams[paramName]) {
-                if (paramName === 'appl.name') {
-                    // Check for special firmware (SP or SI prefix)
-                    if (paramValue.startsWith('SP') || paramValue.startsWith('SI')) {
-                        suggestions += `<p><b>${paramName}</b>: <span class="recommended">${paramValue} (Special Firmware Detected)</span> - <span style="color: #F6BE00;">Do not reflash with generic firmware unless instructed by Zebra Support. Contact <a href="mailto:AllcvAnalyzerTeam@zebra.com">AllcvAnalyzerTeam@zebra.com</a> for assistance.</span></p>`;
-                    } else if (predefinedParams[paramName].valid.includes(paramValue)) {
-                        suggestions += `<p><b>${paramName}</b>: <span class="recommended">${paramValue} (Updated as of ${firmwareLastUpdated})</span></p>`;
+    const predefinedBluetoothParams = {
+        "bluetooth.discoverable": { valid: "on", invalid: "off", display: "Recommended: on", tooltip: "Enables device visibility for pairing." },
+        "bluetooth.short_address": { valid: "Any value", invalid: "000000000000", display: "Not Present", tooltip: "Unique Bluetooth address; should not be all zeros." },
+        "bluetooth.enable": { valid: "on", invalid: "off", display: "Recommended: on", tooltip: "Turns on Bluetooth functionality." },
+        "bluetooth.bonding": { valid: "on", invalid: "off", display: "Recommended: on", tooltip: "Enables secure device pairing." },
+        "bluetooth.enable_reconnect": { valid: "iOS_only", invalid: "off", display: "Recommended: iOS only", tooltip: "Improves reconnection reliability on iOS devices." },
+        "bluetooth.sniff_mode_enable": { valid: "disabled", invalid: "enabled", display: "Recommended: disabled", tooltip: "Disabling reduces power consumption." }
+    };
+
+    const predefinedWlanParams = {
+        "wlan.essid": { valid: "Any value", invalid: "", display: "ESSID Not Set", tooltip: "Network name must be specified." },
+        "wlan.wpa.enable": { valid: "on", invalid: "off", display: "Recommended: on", tooltip: "Enables WPA security for WLAN." },
+        "wlan.security": { valid: ["none", "eap-tls", "eap-ttls", "eap-fast", "peap", "leap", "wpa psk", "wpa eap-tls", "wpa eap-ttls", "wpa eap-fast", "wpa peap", "wpa leap"], invalid: "", display: "Current value", tooltip: "Supported security protocols." },
+        "wlan.ip.addr": { valid: "Any value", invalid: "0.0.0.0", display: "No IP address", tooltip: "Valid IP required for network connectivity." },
+        "wlan.ip.netmask": { valid: "Any value", invalid: "0.0.0.0", display: "No Subnet Mask", tooltip: "Defines network segment." },
+        "wlan.ip.gateway": { valid: "Any value", invalid: "0.0.0.0", display: "No Gateway", tooltip: "Gateway IP for routing traffic." },
+        "wlan.mac_raw": { valid: "Any value", invalid: "000000000000", display: "Not Present", tooltip: "Unique MAC address; should not be all zeros." },
+        "wlan.user_channel_list": { valid: ["1","2","3","4","5","6","7","8","9","10","11","all"], invalid: "Any other than 'all'", display: "Recommended: all", tooltip: "Set to 'all' for maximum channel flexibility." },
+        "wlan.ip.port": { valid: ["6101", "9100"], invalid: "Other than VV", display: "Recommended: 9100", tooltip: "Port 9100 is standard for printing." },
+        "wlan.pmf": { valid: "disabled", invalid: "enabled", display: "Recommended: disabled", tooltip: "Disable PMF unless required by network." }
+    };
+
+    const predefinedInternalParams = {
+        "internal_wired.ip.addr": { valid: "Any value", invalid: "0.0.0.0", display: "No IP address", tooltip: "Valid IP required for wired connection." },
+        "internal_wired.ip.netmask": { valid: "Any value", invalid: "0.0.0.0", display: "No Subnet Mask", tooltip: "Defines wired network segment." },
+        "internal_wired.ip.gateway": { valid: "Any value", invalid: "0.0.0.0", display: "No Gateway", tooltip: "Gateway IP for wired routing." },
+        "internal_wired.ip.port": { valid: ["6101","9101"], invalid: "0", display: "No Port Set", tooltip: "Set a valid port for communication." },
+        "internal_wired.ip.arp_interval": { valid: "1", invalid: "0", display: "Recommended: 1", tooltip: "ARP interval of 1 ensures network updates." },
+        "internal_wired.ip.timeout.enable": { valid: "on", invalid: "off", display: "Recommended: on", tooltip: "Enables timeout for connection stability." },
+        "internal_wired.ip.timeout.value": { valid: "5", invalid: "Other than 5", display: "Recommended: 5", tooltip: "5 seconds is optimal for timeout." },
+        "internal_wired.mac_raw": { valid: "Any Value", invalid: "000000000000", display: "No MAC address", tooltip: "Unique MAC address required." }
+    };
+
+    const predefinedapplParams = {
+        "appl.name": {
+            valid: ["V89.21.30Z", "V93.21.30Z", "V84.20.23Z", "V83.20.25Z", "V88.01.06Z", "V101.21.30Z", "V91.21.30Z", "V85.20.25Z", "V100.21.30Z", "V53.17.24Z", "V97.21.30Z", "V72.20.25Z", "V75.20.21Z", "V92.21.30Z", "V96.21.30Z", "V94.21.30Z"],
+            invalid: "",
+            display: "Not Updated",
+            tooltip: "Firmware version must be up-to-date. Check the latest versions on Zebra's website."
+        },
+        "appl.link_os_version": {
+            valid: ["7.2", "7.1", "7.0", "6.9", "6.8", "6.7", "6.6", "6.5", "6.4", "6.3", "6.2", "6.1", "6.0"],
+            olderValid: ["5.1", "5.2", "5.3", "4.0", "2.5"],
+            tooltip: "Link-OS version. Older versions may still be valid for some printers. Verify compatibility at zebra.com/support."
+        }
+    };
+
+    const firmwareLastUpdated = "March 12, 2025";
+
+    function generateSuggestions(userParams, predefinedParams, header) {
+        let suggestions = '';
+        const userParamsArray = userParams.split('\n');
+        for (let i = 0; i < userParamsArray.length; i++) {
+            const param = userParamsArray[i].split(':');
+            if (param.length >= 2) {
+                const paramName = param[0].trim();
+                const paramValue = param[1].split(',')[0].trim();
+                if (predefinedParams[paramName]) {
+                    if (paramName === 'appl.name') {
+                        if (paramValue.startsWith('SP') || paramValue.startsWith('SI')) {
+                            suggestions += `<p><b>${paramName}</b>: <span class="recommended">${paramValue} (Special Firmware Detected)</span> - <span style="color: #F6BE00;">Do not reflash with generic firmware unless instructed by L2s.</span></p>`;
+                            // Trigger special firmware notification after primary notification
+                            setTimeout(() => {
+                                showNotification(`Special Firmware Detected (${paramValue})`, '#FF9800'); // Orange for warning
+                            }, 5000); // Delay to appear after primary notification
+                        } else if (predefinedParams[paramName].valid.includes(paramValue)) {
+                            suggestions += `<p><b>${paramName}</b>: <span class="recommended">${paramValue} (Updated as of ${firmwareLastUpdated})</span></p>`;
+                        } else {
+                            suggestions += `<p><b>${paramName}</b>: <span class="wrong">${paramValue} (Not Updated)</span> - <span class="recommended">Latest versions available at <a href="https://www.zebra.com/us/en/support-downloads.html" target="_blank">zebra.com/support</a></span> <span class="tooltip">[?]<span class="tooltiptext">${predefinedParams[paramName].tooltip}</span></span></p>`;
+                        }
+                    } else if (paramName === 'appl.link_os_version') {
+                        if (predefinedParams[paramName].valid.includes(paramValue)) {
+                            suggestions += `<p><b>${paramName}</b>: <span class="recommended">${paramValue} (Supported as of ${firmwareLastUpdated})</span></p>`;
+                        } else if (predefinedParams[paramName].olderValid && predefinedParams[paramName].olderValid.includes(paramValue)) {
+                            suggestions += `<p><b>${paramName}</b>: <span style="color: #F6BE00;">${paramValue} (Older but Valid)</span> - <span class="recommended">This version may be compatible with your printer. Check <a href="https://www.zebra.com/us/en/support-downloads.html" target="_blank">zebra.com/support</a> for details.</span> <span class="tooltip">[?]<span class="tooltiptext">${predefinedParams[paramName].tooltip}</span></span></p>`;
+                        } else {
+                            suggestions += `<p><b>${paramName}</b>: <span class="wrong">${paramValue} (Not Recognized)</span> - <span class="recommended">Verify compatibility at <a href="https://www.zebra.com/us/en/support-downloads.html" target="_blank">zebra.com/support</a></span> <span class="tooltip">[?]<span class="tooltiptext">${predefinedParams[paramName].tooltip}</span></span></p>`;
+                        }
+                    } else if (Array.isArray(predefinedParams[paramName].valid)) {
+                        if (!predefinedParams[paramName].valid.includes(paramValue)) {
+                            suggestions += `<p><b>${paramName}</b>: <span class="wrong">${paramValue} (Invalid)</span> - <span class="recommended">${predefinedParams[paramName].display}</span> <span class="tooltip">[?]<span class="tooltiptext">${predefinedParams[paramName].tooltip}</span></span></p>`;
+                        }
+                    } else if (paramName === 'bluetooth.short_address' || paramName === 'wlan.mac_raw' || paramName === 'internal_wired.mac_raw') {
+                        if (paramValue === predefinedParams[paramName].invalid) {
+                            suggestions += `<p><b>${paramName}</b>: <span class="wrong">${paramValue}</span> - <span class="recommended">${predefinedParams[paramName].display}</span> <span class="tooltip">[?]<span class="tooltiptext">${predefinedParams[paramName].tooltip}</span></span></p>`;
+                        } else {
+                            suggestions += `<p><b>${paramName}</b>: <span class="recommended">${paramValue}</span></p>`;
+                        }
                     } else {
-                        suggestions += `<p><b>${paramName}</b>: <span class="wrong">${paramValue} (Not Updated)</span> - <span class="recommended">Latest versions available at <a href="https://www.zebra.com/us/en/support-downloads.html" target="_blank">zebra.com/support</a></span> <span class="tooltip">[?]<span class="tooltiptext">${predefinedParams[paramName].tooltip}</span></span></p>`;
-                    }
-                } else if (paramName === 'appl.link_os_version') {
-                    if (predefinedParams[paramName].valid.includes(paramValue)) {
-                        suggestions += `<p><b>${paramName}</b>: <span class="recommended">${paramValue} (Supported as of ${firmwareLastUpdated})</span></p>`;
-                    } else if (predefinedParams[paramName].olderValid && predefinedParams[paramName].olderValid.includes(paramValue)) {
-                        suggestions += `<p><b>${paramName}</b>: <span style="color: #F6BE00;">${paramValue} (Older but Valid)</span> - <span class="recommended">This version may be compatible with your printer. Check <a href="https://www.zebra.com/us/en/support-downloads.html" target="_blank">zebra.com/support</a> for details.</span> <span class="tooltip">[?]<span class="tooltiptext">${predefinedParams[paramName].tooltip}</span></span></p>`;
-                    } else {
-                        suggestions += `<p><b>${paramName}</b>: <span class="wrong">${paramValue} (Not Recognized)</span> - <span class="recommended">Verify compatibility at <a href="https://www.zebra.com/us/en/support-downloads.html" target="_blank">zebra.com/support</a></span> <span class="tooltip">[?]<span class="tooltiptext">${predefinedParams[paramName].tooltip}</span></span></p>`;
-                    }
-                } else if (Array.isArray(predefinedParams[paramName].valid)) {
-                    if (!predefinedParams[paramName].valid.includes(paramValue)) {
-                        suggestions += `<p><b>${paramName}</b>: <span class="wrong">${paramValue} (Invalid)</span> - <span class="recommended">${predefinedParams[paramName].display}</span> <span class="tooltip">[?]<span class="tooltiptext">${predefinedParams[paramName].tooltip}</span></span></p>`;
-                    }
-                } else if (paramName === 'bluetooth.short_address' || paramName === 'wlan.mac_raw' || paramName === 'internal_wired.mac_raw') {
-                    if (paramValue === predefinedParams[paramName].invalid) {
-                        suggestions += `<p><b>${paramName}</b>: <span class="wrong">${paramValue}</span> - <span class="recommended">${predefinedParams[paramName].display}</span> <span class="tooltip">[?]<span class="tooltiptext">${predefinedParams[paramName].tooltip}</span></span></p>`;
-                    } else {
-                        suggestions += `<p><b>${paramName}</b>: <span class="recommended">${paramValue}</span></p>`;
-                    }
-                } else {
-                    if (paramValue !== predefinedParams[paramName].valid && paramValue === predefinedParams[paramName].invalid) {
-                        suggestions += `<p><b>${paramName}</b>: <span class="wrong">${paramValue} (Invalid)</span> - <span class="recommended">${predefinedParams[paramName].display}</span> <span class="tooltip">[?]<span class="tooltiptext">${predefinedParams[paramName].tooltip}</span></span></p>`;
+                        if (paramValue !== predefinedParams[paramName].valid && paramValue === predefinedParams[paramName].invalid) {
+                            suggestions += `<p><b>${paramName}</b>: <span class="wrong">${paramValue} (Invalid)</span> - <span class="recommended">${predefinedParams[paramName].display}</span> <span class="tooltip">[?]<span class="tooltiptext">${predefinedParams[paramName].tooltip}</span></span></p>`;
+                        }
                     }
                 }
             }
         }
+        if (header === 'Firmware' && suggestions) {
+            suggestions += `<p><small>Firmware list last updated: ${firmwareLastUpdated}. Visit <a href="https://www.zebra.com/us/en/support-downloads.html" target="_blank">zebra.com/support</a> to ensure you have the latest generic firmware.</small></p>`;
+        }
+        return suggestions ? `<h2><u>${header}</u></h2>${suggestions}` : '';
     }
-    if (header === 'Firmware' && suggestions) {
-        suggestions += `<p><small>Firmware list last updated: ${firmwareLastUpdated}. Visit <a href="https://www.zebra.com/us/en/support-downloads.html" target="_blank">zebra.com/support</a> to ensure you have the latest generic firmware.</small></p>`;
+
+    if (selectedParam === 'All' || selectedParam === 'Bluetooth') {
+        suggestions += generateSuggestions(userParams, predefinedBluetoothParams, 'Bluetooth');
     }
-    return suggestions ? `<h2><u>${header}</u></h2>${suggestions}` : '';
+    if (selectedParam === 'All' || selectedParam === 'WLAN') {
+        suggestions += generateSuggestions(userParams, predefinedWlanParams, 'WLAN');
+    }
+    if (selectedParam === 'All' || selectedParam === 'Internal') {
+        suggestions += generateSuggestions(userParams, predefinedInternalParams, 'Internal Wired');
+    }
+    if (selectedParam === 'All' || selectedParam === 'Firmware') {
+        suggestions += generateSuggestions(userParams, predefinedapplParams, 'Firmware');
+    }
+
+    return suggestions;
 }
 
-            if (selectedParam === 'All' || selectedParam === 'Bluetooth') {
-                suggestions += generateSuggestions(userParams, predefinedBluetoothParams, 'Bluetooth');
-            }
-            if (selectedParam === 'All' || selectedParam === 'WLAN') {
-                suggestions += generateSuggestions(userParams, predefinedWlanParams, 'WLAN');
-            }
-            if (selectedParam === 'All' || selectedParam === 'Internal') {
-                suggestions += generateSuggestions(userParams, predefinedInternalParams, 'Internal Wired');
-            }
-            if (selectedParam === 'All' || selectedParam === 'Firmware') {
-                suggestions += generateSuggestions(userParams, predefinedapplParams, 'Firmware');
-            }
-
-            return suggestions;
-        }
-
-        function wipe() {
-            userParams.value = '';
-            suggestionOutput.style.display = 'none';
-            notification.textContent = 'Input cleared.';
-            notification.style.display = 'block';
-            setTimeout(() => notification.style.display = 'none', 2000);
-        }
+    function wipe() {
+    userParams.value = '';
+    suggestionOutput.style.display = 'none';
+    showNotification('Input cleared!', '#F6BE00');
+}
     </script>
     <div class="container">
         <p>© 2024 AllcvAnalyzerTeam. All rights reserved.</p>
